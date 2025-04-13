@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ứng Dụng Xử Lý Ảnh</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css"
+    />
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        line-height: 1.6;
+        margin: 0;
+        padding: 20px;
+        background-color: #f5f5f5;
+        color: #333;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+      h1,
+      h2,
+      h3 {
+        color: #2c3e50;
+      }
+      .upload-section {
+        text-align: center;
+        padding: 20px;
+        border: 2px dashed #ccc;
+        border-radius: 5px;
+        margin-bottom: 20px;
+        background: #f9f9f9;
+      }
+      .controls {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+      .control-group {
+        background: #f9f9f9;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 15px;
+        border: 1px solid #eee;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+      }
+      input[type="range"] {
+        width: 100%;
+        margin: 10px 0;
+      }
+      .slider-value {
+        display: inline-block;
+        width: 40px;
+        text-align: right;
+        font-weight: normal;
+      }
+      .image-preview {
+        display: flex;
+        justify-content: space-around;
+        margin-top: 20px;
+        flex-wrap: wrap;
+      }
+      .image-container {
+        text-align: center;
+        margin: 10px;
+        flex: 1;
+        min-width: 300px;
+      }
+      .image-container img {
+        max-width: 100%;
+        max-height: 400px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      button {
+        background-color: #3498db;
+        color: white;
+        border: none;
+        padding: 10px 15px;
+        text-align: center;
+        text-decoration: none;
+        display: inline-block;
+        font-size: 16px;
+        margin: 4px 2px;
+        cursor: pointer;
+        border-radius: 4px;
+        transition: background-color 0.3s;
+      }
+      button:hover {
+        background-color: #2980b9;
+      }
+      button.reset {
+        background-color: #e74c3c;
+      }
+      button.reset:hover {
+        background-color: #c0392b;
+      }
+      button.download {
+        background-color: #2ecc71;
+      }
+      button.download:hover {
+        background-color: #27ae60;
+      }
+      .button-group {
+        text-align: center;
+        margin: 20px 0;
+      }
+      .cropper-container {
+        margin: 0 auto;
+      }
+      .cropper-view-box {
+        outline: 2px solid #39f;
+        outline-color: rgba(51, 153, 255, 0.75);
+      }
+      #source-image {
+        max-height: 500px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Ứng Dụng Xử Lý Ảnh</h1>
+
+      <div class="upload-section">
+        <form action="/upload" method="post" enctype="multipart/form-data">
+          <h2>Tải Ảnh Lên</h2>
+          <input type="file" name="file" accept="image/*" required />
+          <button type="submit">Tải Lên</button>
+        </form>
+      </div>
+
+      {% if uploaded_img %}
+      <form action="/process" method="post">
+        <input type="hidden" name="uploaded_img" value="{{ uploaded_img }}" />
+        <input type="hidden" name="thumbnail_img" value="{{ thumbnail_img }}" />
+
+        <div class="controls">
+          <div>
+            <div class="control-group">
+              <h3>Bộ Lọc Ảnh</h3>
+              <select name="filter">
+                <option value="none">Không Lọc</option>
+                <option value="grayscale">Trắng Đen</option>
+                <option value="blur">Làm Mờ</option>
+                <option value="enhance">Tăng Cường Chi Tiết</option>
+                <option value="sharpen">Làm Sắc Nét</option>
+              </select>
+            </div>
+
+            <div class="control-group">
+              <h3>Điều Chỉnh</h3>
+              <label>
+                Độ Sáng:
+                <span class="slider-value" id="brightness-value">1.0</span>
+                <input
+                  type="range"
+                  name="brightness"
+                  min="0.1"
+                  max="3.0"
+                  step="0.1"
+                  value="1.0"
+                  oninput="document.getElementById('brightness-value').textContent = this.value"
+                />
+              </label>
+              <label>
+                Độ Tương Phản:
+                <span class="slider-value" id="contrast-value">1.0</span>
+                <input
+                  type="range"
+                  name="contrast"
+                  min="0.1"
+                  max="3.0"
+                  step="0.1"
+                  value="1.0"
+                  oninput="document.getElementById('contrast-value').textContent = this.value"
+                />
+              </label>
+            </div>
+
+            <div class="control-group">
+              <h3>Phát Hiện Cạnh</h3>
+              <label
+                ><input type="radio" name="edge" value="none" checked />
+                Không</label
+              ><br />
+              <label
+                ><input type="radio" name="edge" value="canny" /> Canny</label
+              ><br />
+              <label
+                ><input type="radio" name="edge" value="sobel" /> Sobel</label
+              >
+            </div>
+          </div>
+
+          <div>
+            <div class="control-group">
+              <h3>Xoay & Lật Ảnh</h3>
+              <label>
+                Góc Xoay:
+                <select name="rotate">
+                  <option value="0">0°</option>
+                  <option value="90">90°</option>
+                  <option value="180">180°</option>
+                  <option value="270">270°</option>
+                </select>
+              </label>
+              <h4>Lật Ảnh</h4>
+              <label
+                ><input type="radio" name="flip" value="none" checked /> Không
+                Lật</label
+              ><br />
+              <label
+                ><input type="radio" name="flip" value="horizontal" /> Lật
+                Ngang</label
+              ><br />
+              <label
+                ><input type="radio" name="flip" value="vertical" /> Lật
+                Dọc</label
+              >
+            </div>
+
+            <div class="control-group">
+              <h3>Định Dạng Đầu Ra</h3>
+              <label
+                ><input type="radio" name="format" value="original" checked />
+                Giữ Nguyên</label
+              ><br />
+              <label><input type="radio" name="format" value="jpg" /> JPG</label
+              ><br />
+              <label
+                ><input type="radio" name="format" value="png" /> PNG</label
+              >
+            </div>
+
+            <div class="control-group">
+              <h3>Tính Năng Khác</h3>
+              <label
+                ><input type="checkbox" name="face_detect" value="on" /> Nhận
+                Diện Khuôn Mặt</label
+              >
+            </div>
+          </div>
+        </div>
+
+        <div class="button-group">
+          <button type="submit">Áp Dụng Hiệu Ứng</button>
+          <button type="button" class="reset" onclick="location.href='/'">
+            Làm Mới
+          </button>
+          {% if processed_img %}
+          <button
+            type="button"
+            class="download"
+            onclick="location.href='/download'"
+          >
+            Tải Ảnh Xuống
+          </button>
+          {% endif %}
+        </div>
+      </form>
+
+      <div class="control-group">
+        <h3>Cắt Ảnh Trực Tiếp</h3>
+        <button type="button" id="start-crop">Bắt Đầu Crop</button>
+        <button type="button" id="apply-crop" style="display: none">
+          Áp Dụng Crop
+        </button>
+        <button type="button" id="cancel-crop" style="display: none">
+          Hủy Bỏ
+        </button>
+      </div>
+
+      <form id="crop-form" action="/crop" method="post" style="display: none">
+        <input type="hidden" name="uploaded_img" value="{{ uploaded_img }}" />
+        <input type="hidden" name="x" id="crop-x" />
+        <input type="hidden" name="y" id="crop-y" />
+        <input type="hidden" name="width" id="crop-width" />
+        <input type="hidden" name="height" id="crop-height" />
+      </form>
+
+      <div class="image-preview">
+        <div class="image-container">
+          <h3>Ảnh Gốc</h3>
+          <img id="source-image" src="{{ thumbnail_img }}" alt="Ảnh Gốc" />
+        </div>
+        {% if processed_img %}
+        <div class="image-container">
+          <h3>Ảnh Đã Xử Lý</h3>
+          <img src="{{ processed_img }}" alt="Ảnh Đã Xử Lý" />
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
+    <script>
+      // Khởi tạo cropper
+      let cropper;
+      const image = document.getElementById("source-image");
+
+      document
+        .getElementById("start-crop")
+        .addEventListener("click", function () {
+          // Hiển thị nút áp dụng/hủy
+          document.getElementById("apply-crop").style.display = "inline-block";
+          document.getElementById("cancel-crop").style.display = "inline-block";
+          document.getElementById("start-crop").style.display = "none";
+
+          // Khởi tạo cropper
+          cropper = new Cropper(image, {
+            aspectRatio: NaN, // Tự do tỷ lệ
+            viewMode: 1,
+            autoCropArea: 0.8,
+            responsive: true,
+            movable: true,
+            zoomable: true,
+            rotatable: false,
+            guides: true,
+          });
+        });
+
+      document
+        .getElementById("apply-crop")
+        .addEventListener("click", function () {
+          // Lấy thông tin vùng crop
+          const cropData = cropper.getData();
+
+          // Điền thông tin vào form
+          document.getElementById("crop-x").value = Math.round(cropData.x);
+          document.getElementById("crop-y").value = Math.round(cropData.y);
+          document.getElementById("crop-width").value = Math.round(
+            cropData.width
+          );
+          document.getElementById("crop-height").value = Math.round(
+            cropData.height
+          );
+
+          // Gửi form
+          document.getElementById("crop-form").submit();
+        });
+
+      document
+        .getElementById("cancel-crop")
+        .addEventListener("click", function () {
+          // Hủy cropper và khôi phục ảnh gốc
+          if (cropper) {
+            cropper.destroy();
+            image.style.transform = "";
+          }
+
+          // Ẩn nút áp dụng/hủy
+          document.getElementById("apply-crop").style.display = "none";
+          document.getElementById("cancel-crop").style.display = "none";
+          document.getElementById("start-crop").style.display = "inline-block";
+        });
+    </script>
+  </body>
+</html>
