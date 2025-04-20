@@ -134,7 +134,7 @@ def process_image():
     
     # Chuyển đổi định dạng nếu cần
     if output_format != "original":
-        img_pil = Image.fromarray(img_cv)
+        img_pil = Image.fromarray(cv2.cvtColor(img_cv, cv2.COLOR_BGR2RGB))
         if output_format == "jpg":
             processed_path = os.path.join(app.config["PROCESSED_FOLDER"], "processed.jpg")
             img_pil = img_pil.convert("RGB")
@@ -182,6 +182,8 @@ def download():
         processed_img = os.path.join(app.config["PROCESSED_FOLDER"], "processed.jpg")
     return send_file(processed_img, as_attachment=True)
 
+# if __name__ == "__main__":
+    # port = int(os.environ.get("PORT", 5000))  # Lấy PORT từ biến môi trường
+    # app.run(host="0.0.0.0", port=port)
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))  # Lấy PORT từ biến môi trường
-    app.run(host="0.0.0.0", port=port)
+    app.run(debug=True)
